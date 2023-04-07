@@ -133,7 +133,7 @@ int main()
 {
     // Initialize GLFW
     glfwInit();
-    GLFWwindow* window = glfwCreateWindow(800, 600, "ImGUI Example", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(900, 600, "Pizza Box Ray Tracing Engine", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
     // Initialize ImGUI
@@ -142,10 +142,12 @@ int main()
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable docking
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable viewports
+	io.ConfigDockingWithShift = true;
 	io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
 	std::cout << (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) << std::endl;
 	std::cout << (io.BackendFlags & ImGuiBackendFlags_RendererHasViewports) << std::endl;
+	ImGuiPlatformIO platformIO = ImGui::GetPlatformIO();
 	SetupImGuiStyle();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
@@ -163,50 +165,59 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Window menu bar
-        if (ImGui::BeginMainMenuBar())
-        {
-            if (ImGui::BeginMenu("File"))
-            {
-                ImGui::MenuItem("New", nullptr);
-                ImGui::MenuItem("Open", nullptr);
-                ImGui::MenuItem("Save", nullptr);
-                ImGui::Separator();
-                if (ImGui::MenuItem("Exit"))
-                    glfwSetWindowShouldClose(window, true);
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
-
-        // ImGUI code goes here
-		if (ImGui::Begin("Hello, world!"))
-		{
-			ImGui::Text("This is an ImGUI app using GLFW and OpenGL.");
-			ImGui::End();
-		}
-
-		if (ImGui::Begin("New World"))
-		{
-			ImGui::Button("Press Me!");
-			ImGui::End();
-		}
-
-		//ImGui::ShowStackToolWindow();
-
 		//SetupGlobalDocking();
-		//ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+		//ImGui::DockSpaceOverViewport(platformIO.Viewports[0]);
 		// Docking space
-		/*ImGuiViewport* viewport = ImGui::GetMainViewport();
+		/*ImGuiViewport* viewport = ImGui::GetPlatformIO().Viewports[0];
 		ImGui::SetNextWindowPos(viewport->Pos);
 		ImGui::SetNextWindowSize(viewport->Size);
 		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
 		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 		ImGui::Begin("DockSpace", nullptr, window_flags);
 		ImGui::DockSpaceOverViewport(viewport);
 		ImGui::End();*/
+		ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+		ImVec2 window_pos = ImVec2((float)main_viewport->Pos.x, (float)main_viewport->Pos.y);
+		ImVec2 window_size = ImVec2((float)main_viewport->Size.x, (float)main_viewport->Size.y);
+
+		ImGui::SetNextWindowPos(window_pos);
+		ImGui::SetNextWindowSize(window_size);
+		ImGui::SetNextWindowViewport(main_viewport->ID);
+
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		if (ImGui::Begin("Full Screen Window", nullptr, window_flags))
+		{
+			ImGui::PopStyleVar(3);
+			// Window menu bar
+			if (ImGui::BeginMenuBar())
+			{
+				if (ImGui::BeginMenu("File"))
+				{
+					ImGui::MenuItem("New", nullptr);
+					ImGui::MenuItem("Open", nullptr);
+					ImGui::MenuItem("Save", nullptr);
+					ImGui::Separator();
+					if (ImGui::MenuItem("Exit"))
+						glfwSetWindowShouldClose(window, true);
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenuBar();
+			}
+
+			// Dockspace
+			ImGui::DockSpace(ImGui::GetID("FullViewportDockSpace"), ImVec2(0.0f, 0.0f));
+
+		}
+		ImGui::End();
+
+        // ImGUI code goes here
+		ImGui::ShowStackToolWindow();
 
         // Rendering
         ImGui::Render();
