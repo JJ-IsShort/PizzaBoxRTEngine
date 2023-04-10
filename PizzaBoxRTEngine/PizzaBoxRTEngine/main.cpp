@@ -5,6 +5,13 @@
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <iostream>
 
+#include <list>
+#include <functional>
+
+// My header files
+#include "Panel.h"
+#include "Viewport.h"
+
 void SetupImGuiStyle()
 {
 	// Photoshop style by Derydoca from ImThemes
@@ -96,39 +103,6 @@ void SetupImGuiStyle()
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.5860000252723694f);
 }
 
-// Deprecated. Didn't even last one commit.
-void SetupGlobalDocking()
-{
-	ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
-	// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-	// because it would be confusing to have two docking targets within each others.
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);
-	ImGui::SetNextWindowViewport(viewport->ID);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-	// When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-	// and handle the pass-thru hole, so we ask Begin() to not render a background.
-	if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-		window_flags |= ImGuiWindowFlags_NoBackground;
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("DockSpace", NULL, window_flags);
-	ImGui::PopStyleVar(3);
-
-	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-	ImGui::End();
-}
-
 int main()
 {
     // Initialize GLFW
@@ -152,6 +126,12 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+	// List of all Panels that should be Shown()
+	std::list<std::reference_wrapper<Panel>> panels;
+
+	Viewport viewport;
+	panels.push_back(std::ref(viewport));
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -165,19 +145,7 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-		//SetupGlobalDocking();
-		//ImGui::DockSpaceOverViewport(platformIO.Viewports[0]);
-		// Docking space
-		/*ImGuiViewport* viewport = ImGui::GetPlatformIO().Viewports[0];
-		ImGui::SetNextWindowPos(viewport->Pos);
-		ImGui::SetNextWindowSize(viewport->Size);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-		ImGui::Begin("DockSpace", nullptr, window_flags);
-		ImGui::DockSpaceOverViewport(viewport);
-		ImGui::End();*/
+#pragma region Workspace Setup
 		ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 		ImVec2 window_pos = ImVec2((float)main_viewport->Pos.x, (float)main_viewport->Pos.y);
 		ImVec2 window_size = ImVec2((float)main_viewport->Size.x, (float)main_viewport->Size.y);
@@ -215,9 +183,14 @@ int main()
 
 		}
 		ImGui::End();
+#pragma endregion
 
         // ImGUI code goes here
 		ImGui::ShowStackToolWindow();
+		for (auto& panelRef : panels) {
+			Panel& panel = panelRef;
+			panel.Show();
+		}
 
         // Rendering
         ImGui::Render();

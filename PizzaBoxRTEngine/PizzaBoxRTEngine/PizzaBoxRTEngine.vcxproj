@@ -141,11 +141,17 @@
     <ClCompile Include="..\..\External\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Panel.cpp" />
+    <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\External\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="..\..\External\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="..\..\External\imgui\imgui.h" />
+    <ClInclude Include="Panel.h" />
+    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Viewport.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
