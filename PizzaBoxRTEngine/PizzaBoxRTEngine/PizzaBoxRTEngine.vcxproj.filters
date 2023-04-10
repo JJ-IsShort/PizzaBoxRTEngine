@@ -22,6 +22,12 @@
     <Filter Include="Source Files\ImGUI\backend">
       <UniqueIdentifier>{694fd1aa-66f1-4b5d-8d05-20e93972df07}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Panels">
+      <UniqueIdentifier>{1c2a63ac-00de-4a9d-b7d1-5f62e9f093be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Panels">
+      <UniqueIdentifier>{1c7ce3e5-8a14-4d6e-9f6e-5d1375c9b50c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\External\imgui\imgui.cpp">
@@ -48,6 +54,15 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Panel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Viewport.cpp">
+      <Filter>Source Files\Panels</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\External\imgui\backends\imgui_impl_glfw.h">
@@ -58,6 +73,15 @@
     </ClInclude>
     <ClInclude Include="..\..\External\imgui\imgui.h">
       <Filter>Header Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Panel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Viewport.h">
+      <Filter>Header Files\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
