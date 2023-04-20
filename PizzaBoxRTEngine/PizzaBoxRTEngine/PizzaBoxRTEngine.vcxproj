@@ -104,13 +104,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui\backends;D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glm;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\include;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui\backends;D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glm;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\include;D:\Vulkan 1.3.243.0\Include;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\lib\Release\x64;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;glew32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Vulkan 1.3.243.0\Lib;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\lib\Release\x64;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -121,20 +122,21 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui\backends;D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glm;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\include;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui\backends;D:\Misc Coding Projects\PizzaBoxRTEngine\External\imgui;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glm;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\include;D:\Vulkan 1.3.243.0\Include;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\lib\Release\x64;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;glew32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Vulkan 1.3.243.0\Lib;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glew-2.1.0\lib\Release\x64;D:\Misc Coding Projects\PizzaBoxRTEngine\External\glfw-3.3.8.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\External\imgui\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="..\..\External\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\..\External\imgui\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
@@ -147,7 +149,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\External\imgui\backends\imgui_impl_glfw.h" />
-    <ClInclude Include="..\..\External\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="..\..\External\imgui\backends\imgui_impl_vulkan.h" />
     <ClInclude Include="..\..\External\imgui\imgui.h" />
     <ClInclude Include="Panel.h" />
     <ClInclude Include="Renderer.h" />

@@ -48,9 +48,6 @@
     <ClCompile Include="..\..\External\imgui\backends\imgui_impl_glfw.cpp">
       <Filter>Source Files\ImGUI\backend</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\External\imgui\backends\imgui_impl_opengl3.cpp">
-      <Filter>Source Files\ImGUI\backend</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -63,12 +60,12 @@
     <ClCompile Include="Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\External\imgui\backends\imgui_impl_vulkan.cpp">
+      <Filter>Source Files\ImGUI\backend</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\External\imgui\backends\imgui_impl_glfw.h">
-      <Filter>Header Files\ImGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\External\imgui\backends\imgui_impl_opengl3.h">
       <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
     <ClInclude Include="..\..\External\imgui\imgui.h">
@@ -82,6 +79,9 @@
     </ClInclude>
     <ClInclude Include="Renderer.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\External\imgui\backends\imgui_impl_vulkan.h">
+      <Filter>Header Files\ImGUI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
