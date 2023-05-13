@@ -6,19 +6,21 @@ class Backend
 public:
 	enum RendererBackendType {
 		RendererBackendType_None,
-		RendererBackendType_OptiX,
+		RendererBackendType_Vulkan,
 		RendererBackendType_Custom
 	};
 	virtual bool Init();
+	virtual bool CleanupBackend();
 	RendererBackendType backendType = RendererBackendType_None;
 };
 
-class OptiX : 
+class Vulkan : 
 	public Backend
 {
 public:
 	bool Init() override;
-	RendererBackendType backendType = RendererBackendType_OptiX;
+	bool CleanupBackend() override;
+	RendererBackendType backendType = RendererBackendType_Vulkan;
 };
 
 class Renderer
@@ -26,5 +28,5 @@ class Renderer
 public:
 	Renderer();
 	~Renderer();
-	Backend* renderingBackend = new Backend(); // Don't forget to keep an eye on the memory for this. A memory leak her probably wouldn't be too bad but still.
+	Backend* renderingBackend = new Backend(); // Don't forget to keep an eye on the memory for this. A memory leak here probably wouldn't be too bad but still.
 };

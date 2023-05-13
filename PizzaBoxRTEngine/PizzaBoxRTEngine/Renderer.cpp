@@ -3,12 +3,13 @@
 #pragma region Renderer definitions
 Renderer::Renderer()
 {
-	renderingBackend = new OptiX();
+	renderingBackend = new Vulkan();
 }
 
 Renderer::~Renderer()
 {
-	delete renderingBackend; // Delete the Backend object
+	renderingBackend->CleanupBackend(); //	Cleanup the Backend object
+	delete renderingBackend; //				Delete the Backend object
 }
 #pragma endregion
 
@@ -17,10 +18,19 @@ bool Backend::Init()
 {
 	return false;
 }
+bool Backend::CleanupBackend()
+{
+	return false;
+}
 #pragma endregion
 
-#pragma region OptiX backend definitions
-bool OptiX::Init()
+#pragma region Vulkan backend definitions
+bool Vulkan::Init()
+{
+	return false;
+}
+
+bool Vulkan::CleanupBackend()
 {
 	return false;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "Panel.h"
+#include "Renderer.h"
 
 class Viewport :
     public Panel 
@@ -7,5 +8,6 @@ class Viewport :
 public:
     Viewport();
     void Show() override;
+    Renderer renderer;
 };
 
