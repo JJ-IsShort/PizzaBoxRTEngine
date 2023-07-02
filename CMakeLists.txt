@@ -4,6 +4,9 @@ project(PizzaBox)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(GLFW_BUILD_X11 1)
+#set(GLFW_BUILD_WAYLAND 1)
+
 set(IMGUI_SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/External/imgui/imgui.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/External/imgui/imgui_demo.cpp"
@@ -15,9 +18,10 @@ set(IMGUI_SOURCES
 )
 
 set(ENGINE_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Viewport.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Renderer.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Panel.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Panels/Viewport.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Panels/Panel.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Rendering/Renderer.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/VulkanHelp/Context.cpp"
 )
 
 add_executable(PizzaBox
@@ -40,9 +44,19 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
+# Works on Linux
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/External/glfw")
-
 target_link_libraries(PizzaBox PRIVATE glfw)
+
+# find_package(glfw3 REQUIRED)
+# target_link_libraries(PizzaBox PRIVATE glfw)
+
+# Works on Linux
+# find_package(glm REQUIRED)
+# target_link_libraries(PizzaBox PRIVATE glm::glm)
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/External/glm")
+target_link_libraries(PizzaBox PUBLIC glm::glm)
 
 # Define C++ version to be used for building the project
 set_property(TARGET ${Recipe_Name} PROPERTY CXX_STANDARD 20)

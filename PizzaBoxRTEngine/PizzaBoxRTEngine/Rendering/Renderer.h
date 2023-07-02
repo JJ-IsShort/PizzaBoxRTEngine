@@ -24,7 +24,7 @@ class Renderer {
 public:
   Renderer();
   ~Renderer();
-  Backend *renderingBackend =
-      new Backend(); // Don't forget to keep an eye on the memory for this. A
-                     // memory leak here probably wouldn't be too bad but still.
+  Backend *renderingBackend; // Don't forget to keep an eye on the memory for
+                             // this. A memory leak here probably wouldn't be
+                             // too bad but still.
 };
