@@ -1,7 +1,15 @@
 #include "Panel.h"
 
-void Panel::Show()
+namespace PBEngine
 {
-	ImGui::Begin("Base Panel Class");
-	ImGui::End();
+	void Panel::Show()
+	{
+		ImGui::Begin("Base Panel Class");
+		ImGui::End();
+	}
+	
+	void Panel::Init()
+	{
+		return;
+	}
 }

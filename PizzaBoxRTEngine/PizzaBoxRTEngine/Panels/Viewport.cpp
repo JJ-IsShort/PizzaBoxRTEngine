@@ -1,9 +1,18 @@
-#include "Panels/Viewport.h"
-#include "Panel.h"
+#include "Viewport.h"
+//#include "Panel.h"
 
-Viewport::Viewport() {}
+namespace PBEngine
+{
+	Viewport::Viewport() {}
 
-void Viewport::Show() {
-  ImGui::Begin("Viewport");
-  ImGui::End();
+	void Viewport::Show() {
+		ImGui::Begin("Viewport");
+		ImGui::End();
+	}
+	
+	void Viewport::Init() {
+		renderer.renderingBackend->Init();
+	}
+
+	Viewport::~Viewport() {}
 }

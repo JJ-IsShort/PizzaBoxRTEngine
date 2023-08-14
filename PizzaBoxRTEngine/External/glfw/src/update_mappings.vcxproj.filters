@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Misc Coding Projects\PizzaBoxRTEngine-windows\PizzaBoxRTEngine\CMakeFiles\d04e992844e545123e3c9d645ba3e670\update_mappings.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Misc Coding Projects\PizzaBoxRTEngine-windows\External\glfw\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\Misc Coding Projects\PizzaBoxRTEngine-windows\External\glfw\src\mappings.h.in">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="D:\Misc Coding Projects\PizzaBoxRTEngine-windows\External\glfw\CMake\GenerateMappings.cmake" />
+    <None Include="D:\Misc Coding Projects\PizzaBoxRTEngine-windows\PizzaBoxRTEngine\External\glfw\src\CMakeFiles\update_mappings" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{459A69F5-E364-3FB4-BDB4-B89C7A305887}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{5422578C-BE54-32F8-B34A-68E7F3F324A8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

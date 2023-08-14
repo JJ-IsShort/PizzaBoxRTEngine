@@ -1,22 +1,41 @@
 #pragma once
 #include <cstdint>
-#include <memory>
-#include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_core.h>
-#include <vulkan/vulkan_handles.hpp>
+//#include "VulkanHelp/vk_common.h"
+#include "../../External/volk/volk.h"
+//#include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.hpp>
+#include <vector>
 
-class AccelerationStructure {
-public:
-  AccelerationStructure();
-  AccelerationStructure(AccelerationStructure &&) = delete;
-  AccelerationStructure(const AccelerationStructure &) = delete;
-  ~AccelerationStructure();
+namespace PBEngine
+{
+    struct Vertex {
+        float x, y, z;
+    };
 
-  AccelStructureData data;
+    struct Index {
+        uint32_t index;
+    };
 
-  struct AccelStructureData {
-    VkAccelerationStructureKHR handle;
-    uint64_t device_address;
-    std::unique_ptr<vk::Buffer> buffer;
-  };
-};
+    // Define the vertex data for the triangle
+    const std::vector<float> triangleVertices = {
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+         0.0f,  0.5f, 0.0f
+    };
+
+    class AccelerationStructure {
+    public:
+        AccelerationStructure();
+        AccelerationStructure(AccelerationStructure&&) = delete;
+        AccelerationStructure(const AccelerationStructure&) = delete;
+        ~AccelerationStructure();
+
+        VkBuffer vertexBuffer;
+        VkDeviceMemory vertexBufferMemory;
+
+        VkAccelerationStructureKHR accelStruct;
+        VkAccelerationStructureCreateInfoKHR accelStructureInfo;
+        VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {};
+        VkAccelerationStructureGeometryTrianglesDataKHR geometryData = {};
+    };
+}

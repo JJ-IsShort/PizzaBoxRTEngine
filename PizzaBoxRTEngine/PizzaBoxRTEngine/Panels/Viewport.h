@@ -1,10 +1,15 @@
 #pragma once
 #include "Panel.h"
-#include "Rendering/Renderer.h"
+#include "../Rendering/Renderer.h"
 
-class Viewport : public Panel {
-public:
-  Viewport();
-  void Show() override;
-  Renderer renderer;
-};
+namespace PBEngine
+{
+	class Viewport : public Panel {
+	public:
+		Viewport();
+		void Show() override;
+		void Init() override;
+		~Viewport() override;
+		Renderer renderer;
+	};
+}
