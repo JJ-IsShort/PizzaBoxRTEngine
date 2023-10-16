@@ -8,8 +8,12 @@ namespace PBEngine
 	public:
 		Viewport();
 		void Show() override;
+		void PreRender() override;
 		void Init() override;
 		~Viewport() override;
-		Renderer renderer;
+		std::unique_ptr<Renderer> renderer;
+
+		float width;
+		float height;
 	};
 }

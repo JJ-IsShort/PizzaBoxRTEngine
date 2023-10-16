@@ -8,6 +8,11 @@ namespace PBEngine
 		ImGui::End();
 	}
 	
+	void Panel::PreRender()
+	{
+		return;
+	}
+
 	void Panel::Init()
 	{
 		return;

@@ -18,7 +18,8 @@
 #else
 #include <GLFW/glfw3.h>
 #endif
-#include "VulkanHelp/vk_common.h"
+#include "../../External/volk/volk.h"
+//#include "VulkanHelp/vk_common.h"
 //#include <vulkan/vulkan.h>
 #include <vector>
 // #include <vulkan/vulkan_beta.h>
@@ -40,8 +41,9 @@ namespace PBEngine
         static VkInstance g_Instance;
         static VkPhysicalDevice g_PhysicalDevice;
         static VkDevice g_Device;
-        static uint32_t g_QueueFamily;
-        static VkQueue g_Queue;
+        static uint32_t g_QueueFamily[2]; // 1 - Rendering, 2 - Compute
+        static VkQueue g_RenderQueue[2];
+        static VkQueue g_ComputeQueue;
         static VkDebugReportCallbackEXT g_DebugReport;
         static VkPipelineCache g_PipelineCache;
         static VkDescriptorPool g_DescriptorPool;
@@ -199,12 +201,17 @@ namespace PBEngine
                     sizeof(VkQueueFamilyProperties) * count);
                 vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, queues);
                 for (uint32_t i = 0; i < count; i++)
-                    if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
-                        g_QueueFamily = i;
-                        break;
+                {
+                    if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                        g_QueueFamily[0] = i;
                     }
+                    if (queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+                        g_QueueFamily[1] = i;
+                    }
+                }
                 free(queues);
-                IM_ASSERT(g_QueueFamily != (uint32_t)-1);
+                IM_ASSERT(g_QueueFamily[0] != (uint32_t)-1);
+                IM_ASSERT(g_QueueFamily[1] != (uint32_t)-1);
             }
 
             // Create Logical Device (with 1 queue)
@@ -213,6 +220,11 @@ namespace PBEngine
                 device_extensions.push_back("VK_KHR_swapchain");
                 device_extensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
                 device_extensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+                device_extensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+                device_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+                device_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+                device_extensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+                device_extensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 
                 // Enumerate physical device extension
                 uint32_t properties_count;
@@ -227,18 +239,42 @@ namespace PBEngine
                     VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
                     device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
-                //VkPhysicalDeviceFeatures2 features2{};
-                // Query features 
-                //vkGetPhysicalDeviceFeatures2(g_PhysicalDevice, &features2);
-                //features2.pNext = &InitRTDeviceFeatures();
-                //VkPhysicalDeviceAccelerationStructureFeaturesKHR features2 = InitRTDeviceFeatures();
+                VkPhysicalDeviceFeatures2 enabledFeatures = {};
 
-                const float queue_priority[] = { 1.0f };
-                VkDeviceQueueCreateInfo queue_info[1] = {};
+                VkPhysicalDeviceBufferDeviceAddressFeaturesKHR addrFeatures = {};
+                addrFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+                addrFeatures.pNext = nullptr;
+                addrFeatures.bufferDeviceAddress = VK_TRUE;
+
+                // Enable ray tracing pipeline feature
+                VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures = {};
+                rayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+                rayTracingFeatures.pNext = &addrFeatures;
+                rayTracingFeatures.rayTracingPipeline = VK_TRUE;
+
+                // Enable acceleration structure feature
+                VkPhysicalDeviceAccelerationStructureFeaturesKHR accelStructureFeatures = {};
+                accelStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+                accelStructureFeatures.pNext = &rayTracingFeatures;
+                accelStructureFeatures.accelerationStructure = VK_TRUE;
+
+                // Add the features to the enabledFeatures structure
+                enabledFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+                enabledFeatures.pNext = &accelStructureFeatures;
+
+                VkDeviceQueueCreateInfo queue_info[2] = {};
+                const float queuePriorityRender[] = { 0.0f, 1.0f };
                 queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                queue_info[0].queueFamilyIndex = g_QueueFamily;
-                queue_info[0].queueCount = 1;
-                queue_info[0].pQueuePriorities = queue_priority;
+                queue_info[0].queueFamilyIndex = g_QueueFamily[0];
+                queue_info[0].queueCount = 2;
+                queue_info[0].pQueuePriorities = queuePriorityRender;
+                
+                const float queuePriorityCompute[] = { 1.0f };
+                queue_info[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                queue_info[1].queueFamilyIndex = g_QueueFamily[1];
+                queue_info[1].queueCount = 1;
+                queue_info[1].pQueuePriorities = queuePriorityCompute;
+
                 VkDeviceCreateInfo create_info = {};
                 create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
                 create_info.queueCreateInfoCount =
@@ -246,11 +282,13 @@ namespace PBEngine
                 create_info.pQueueCreateInfos = queue_info;
                 create_info.enabledExtensionCount = (uint32_t)device_extensions.Size;
                 create_info.ppEnabledExtensionNames = device_extensions.Data;
-                //create_info.pNext = &features2;
+                create_info.pNext = &enabledFeatures;
                 err =
                     vkCreateDevice(g_PhysicalDevice, &create_info, g_Allocator, &g_Device);
                 check_vk_result(err);
-                vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
+                vkGetDeviceQueue(g_Device, g_QueueFamily[0], 0, &g_RenderQueue[0]);
+                vkGetDeviceQueue(g_Device, g_QueueFamily[0], 1, &g_RenderQueue[1]);
+                vkGetDeviceQueue(g_Device, g_QueueFamily[1], 0, &g_ComputeQueue);
             }
 
             // Create Descriptor Pool
@@ -279,25 +317,6 @@ namespace PBEngine
             }
         }
 
-        static VkPhysicalDeviceAccelerationStructureFeaturesKHR InitRTDeviceFeatures()
-        {
-            // Acceleration structure features
-            VkPhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures{};
-            accelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-            accelFeatures.accelerationStructure = VK_TRUE;
-            accelFeatures.accelerationStructureHostCommands = VK_TRUE;
-
-            // Ray tracing features 
-            VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures{};
-            rayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-            rayTracingFeatures.rayTracingPipeline = VK_TRUE;
-
-            // Chain ray tracing features
-            accelFeatures.pNext = &rayTracingFeatures;
-
-            return accelFeatures;
-        }
-
         // All the ImGui_ImplVulkanH_XXX structures/functions are optional helpers used
         // by the demo. Your real engine/app may not use them.
         static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd,
@@ -306,7 +325,7 @@ namespace PBEngine
 
             // Check for WSI support
             VkBool32 res;
-            vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily,
+            vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily[0],
                 wd->Surface, &res);
             if (res != VK_TRUE) {
                 fprintf(stderr, "Error no WSI support on physical device 0\n");
@@ -340,7 +359,7 @@ namespace PBEngine
             // Create SwapChain, RenderPass, Framebuffer, etc.
             IM_ASSERT(g_MinImageCount >= 2);
             ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device,
-                wd, g_QueueFamily, g_Allocator, width,
+                wd, g_QueueFamily[0], g_Allocator, width,
                 height, g_MinImageCount);
         }
 
@@ -431,7 +450,7 @@ namespace PBEngine
 
                 err = vkEndCommandBuffer(fd->CommandBuffer);
                 check_vk_result(err);
-                err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
+                err = vkQueueSubmit(g_RenderQueue[0], 1, &info, fd->Fence);
                 check_vk_result(err);
             }
         }
@@ -448,7 +467,7 @@ namespace PBEngine
             info.swapchainCount = 1;
             info.pSwapchains = &wd->Swapchain;
             info.pImageIndices = &wd->FrameIndex;
-            VkResult err = vkQueuePresentKHR(g_Queue, &info);
+            VkResult err = vkQueuePresentKHR(g_RenderQueue[0], &info);
             if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR) {
                 g_SwapChainRebuild = true;
                 return;

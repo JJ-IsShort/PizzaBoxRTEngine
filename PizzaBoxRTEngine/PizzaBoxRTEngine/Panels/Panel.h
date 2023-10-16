@@ -13,6 +13,7 @@ namespace PBEngine
 	{
 	public:
 		virtual void Show();
+		virtual void PreRender();
 		virtual void Init();
 		virtual ~Panel() {};
 	};

@@ -14,8 +14,9 @@ namespace PBEngine
     VkInstance App::g_Instance = VK_NULL_HANDLE;
     VkPhysicalDevice App::g_PhysicalDevice = VK_NULL_HANDLE;
     VkDevice App::g_Device = VK_NULL_HANDLE;
-    uint32_t App::g_QueueFamily = (uint32_t)-1;
-    VkQueue App::g_Queue = VK_NULL_HANDLE;
+    uint32_t App::g_QueueFamily[2]{ (int32_t)-1, (int32_t)-1 };
+    VkQueue App::g_RenderQueue[2]{VK_NULL_HANDLE};
+    VkQueue App::g_ComputeQueue = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT App::g_DebugReport = VK_NULL_HANDLE;
     VkPipelineCache App::g_PipelineCache = VK_NULL_HANDLE;
     VkDescriptorPool App::g_DescriptorPool = VK_NULL_HANDLE;
@@ -234,8 +235,8 @@ namespace PBEngine
         init_info.Instance = g_Instance;
         init_info.PhysicalDevice = g_PhysicalDevice;
         init_info.Device = g_Device;
-        init_info.QueueFamily = g_QueueFamily;
-        init_info.Queue = g_Queue;
+        init_info.QueueFamily = g_QueueFamily[0];
+        init_info.Queue = g_RenderQueue[0];
         init_info.PipelineCache = g_PipelineCache;
         init_info.DescriptorPool = g_DescriptorPool;
         init_info.Subpass = 0;
@@ -268,7 +269,7 @@ namespace PBEngine
             end_info.pCommandBuffers = &command_buffer;
             err = vkEndCommandBuffer(command_buffer);
             check_vk_result(err);
-            err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+            err = vkQueueSubmit(g_RenderQueue[0], 1, &end_info, VK_NULL_HANDLE);
             check_vk_result(err);
 
             err = vkDeviceWaitIdle(g_Device);
@@ -281,10 +282,20 @@ namespace PBEngine
         std::unique_ptr<Viewport> viewport = std::make_unique<Viewport>();
         panels.push_back(std::move(viewport));
 
+        for (auto& panelPtr : panels) {
+            Panel& panel = *panelPtr;
+            panel.Init();
+        }
+
         // Main loop
         while (!glfwWindowShouldClose(window)) {
             // Poll events
             glfwPollEvents();
+
+            for (auto& panelPtr : panels) {
+                Panel& panel = *panelPtr;
+                panel.PreRender();
+            }
 
             // Resize swap chain?
             if (g_SwapChainRebuild) {
@@ -294,7 +305,7 @@ namespace PBEngine
                     ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
                     ImGui_ImplVulkanH_CreateOrResizeWindow(
                         g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData,
-                        g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
+                        g_QueueFamily[0], g_Allocator, width, height, g_MinImageCount);
                     g_MainWindowData.FrameIndex = 0;
                     g_SwapChainRebuild = false;
                 }

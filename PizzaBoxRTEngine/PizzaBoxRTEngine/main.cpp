@@ -1,10 +1,8 @@
 #pragma once
 
-#define VK_NO_PROTOTYPES
-#include "VulkanHelp/vk_common.h"
 #include "app.h"
 
-static PBEngine::App app;
+PBEngine::App app;
 
 int main()
 {

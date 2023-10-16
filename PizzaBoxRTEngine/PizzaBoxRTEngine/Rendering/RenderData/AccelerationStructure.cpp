@@ -1,201 +1,263 @@
 #include "AccelerationStructure.h"
 #include <vulkan/vulkan_core.h>
 #include <iostream>
+#include <memory>
+#include <VulkanHelp/Buffer.h>
 #include "app.h"
 
 namespace PBEngine
 {
-    extern App app;
-
-    // TODO: Make a seperate buffer class inside VulkanHelp, with this as a static function maybe?
-    /*// Function to create a Vulkan buffer
-    void createBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize bufferSize,
-        VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-        VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-        // Create the buffer
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = bufferSize;
-        bufferInfo.usage = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
-
-        // Allocate memory for the buffer
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
-
-        vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory);
-
-        // Bind the memory to the buffer
-        vkBindBufferMemory(device, buffer, bufferMemory, 0);
+    AccelerationStructure::AccelerationStructure(AccelerationStructure&& other) :
+        handle(other.handle),
+        deviceAddress(other.deviceAddress),
+        buffer(std::move(other.buffer)),
+        vertexBuffer(std::move(other.vertexBuffer)),
+        indexBuffer(std::move(other.indexBuffer)),
+        indexCount(other.indexCount)
+    {
+        // Leave other in valid empty state
+        other.handle = VK_NULL_HANDLE;
+        other.deviceAddress = 0;
+        other.buffer = nullptr;
+        other.vertexBuffer = nullptr;
+        other.indexBuffer = nullptr;
+        other.indexCount = 0;
     }
 
-    // Function to find suitable memory type for the buffer
-    uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-
-        // Handle failure to find suitable memory type
-        // Add error handling or fallback behavior here
-        return 0;
-    }*/
-
-    // Helper function to find a suitable memory type index
-    uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-        for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-
-        std::cerr << "Failed to find suitable memory type." << std::endl;
-        return 0;
+    /*
+        Gets the device address from a buffer that's needed in many places during the ray tracing setup
+    */
+    uint64_t AccelerationStructure::get_buffer_device_address(VkBuffer buffer)
+    {
+        VkBufferDeviceAddressInfoKHR buffer_device_address_info{};
+        buffer_device_address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        buffer_device_address_info.buffer = buffer;
+        return vkGetBufferDeviceAddressKHR(GetDevice(), &buffer_device_address_info);
     }
 
-    // Function to create a Vulkan buffer and allocate memory for it
-    void createBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-        // Create the buffer
-        VkBufferCreateInfo bufferCreateInfo = {};
-        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferCreateInfo.size = size;
-        bufferCreateInfo.usage = usage;
-        bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ScratchBuffer AccelerationStructure::create_scratch_buffer(VkDeviceSize size)
+    {
+        ScratchBuffer scratch_buffer{};
 
-        if (vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
-            std::cerr << "Failed to create Vulkan buffer." << std::endl;
-            return;
-        }
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = size;
+        buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        check_vk_result(vkCreateBuffer(GetDevice(), &buffer_create_info, nullptr, &scratch_buffer.handle));
 
-        // Allocate memory for the buffer
-        VkMemoryRequirements memoryRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memoryRequirements);
+        VkMemoryRequirements memory_requirements = {};
+        vkGetBufferMemoryRequirements(GetDevice(), scratch_buffer.handle, &memory_requirements);
 
-        VkMemoryAllocateInfo allocateInfo = {};
-        allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocateInfo.allocationSize = memoryRequirements.size;
-        allocateInfo.memoryTypeIndex = findMemoryType(physicalDevice, memoryRequirements.memoryTypeBits, properties);
+        VkMemoryAllocateFlagsInfo memory_allocate_flags_info = {};
+        memory_allocate_flags_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+        memory_allocate_flags_info.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
 
-        if (vkAllocateMemory(device, &allocateInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            std::cerr << "Failed to allocate memory for Vulkan buffer." << std::endl;
-            return;
-        }
+        VkBool32 memTypeFound = false;
+        VkMemoryAllocateInfo memory_allocate_info = {};
+        memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_allocate_info.pNext = &memory_allocate_flags_info;
+        memory_allocate_info.allocationSize = memory_requirements.size;
+        memory_allocate_info.memoryTypeIndex = GetMemoryType(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, GetPhysicalDevice(), &memTypeFound);
+        check_vk_result(vkAllocateMemory(GetDevice(), &memory_allocate_info, nullptr, &scratch_buffer.memory));
+        check_vk_result(vkBindBufferMemory(GetDevice(), scratch_buffer.handle, scratch_buffer.memory, 0));
 
-        // Bind the memory to the buffer
-        vkBindBufferMemory(device, buffer, bufferMemory, 0);
+        VkBufferDeviceAddressInfoKHR buffer_device_address_info{};
+        buffer_device_address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        buffer_device_address_info.buffer = scratch_buffer.handle;
+        scratch_buffer.device_address = vkGetBufferDeviceAddressKHR(GetDevice(), &buffer_device_address_info);
+
+        return scratch_buffer;
     }
-    void createBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory, VkBufferCreateInfo& bufferCreateInfo) {
-        // Set up the buffer
-        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferCreateInfo.size = size;
-        bufferCreateInfo.usage = usage;
-        bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
-            std::cerr << "Failed to create Vulkan buffer." << std::endl;
-            return;
+    void AccelerationStructure::delete_scratch_buffer(ScratchBuffer& scratch_buffer)
+    {
+        if (scratch_buffer.memory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(GetDevice(), scratch_buffer.memory, nullptr);
         }
-
-        // Allocate memory for the buffer
-        VkMemoryRequirements memoryRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memoryRequirements);
-
-        VkMemoryAllocateInfo allocateInfo = {};
-        allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocateInfo.allocationSize = memoryRequirements.size;
-        allocateInfo.memoryTypeIndex = findMemoryType(physicalDevice, memoryRequirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(device, &allocateInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            std::cerr << "Failed to allocate memory for Vulkan buffer." << std::endl;
-            return;
+        if (scratch_buffer.handle != VK_NULL_HANDLE)
+        {
+            vkDestroyBuffer(GetDevice(), scratch_buffer.handle, nullptr);
         }
-
-        // Bind the memory to the buffer
-        vkBindBufferMemory(device, buffer, bufferMemory, 0);
     }
 
     AccelerationStructure::AccelerationStructure()
     {
-        accelStructureInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV;
-        accelStructureInfo.pNext = NULL;
-        accelStructureInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        size_t vertex_buffer_size = triangleVertices.size() * sizeof(Vertex);
+        size_t index_buffer_size = indices.size() * sizeof(uint32_t);
 
-        // Where Geometry happens
-        //geometry.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
-        //geometry.pNext = NULL;
-        //geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV;
-        //geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        // Create buffers for the bottom level geometry
+        const VkBufferUsageFlags bufferUsageFlags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        const VkMemoryPropertyFlags bufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-        // Create a VkBuffer to store the vertex data
-        VkBufferCreateInfo bufferCreateInfo = {};
-        createBuffer(app.g_Device, app.g_PhysicalDevice, sizeof(float) * triangleVertices.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer, vertexBufferMemory, bufferCreateInfo);
+        void* triangleVoid = const_cast<void*>(reinterpret_cast<const void*>(triangleVertices.data()));
+        vertexBuffer = std::make_unique<Buffer>(GetDevice(), GetPhysicalDevice(), vertex_buffer_size, bufferUsageFlags, bufferMemoryFlags);
+        vertexBuffer->update(triangleVoid, vertex_buffer_size);
 
-        // Fill the vertex buffer with the vertex data
-        void* mappedMemory;
-        vkMapMemory(app.g_Device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &mappedMemory);
-        memcpy(mappedMemory, triangleVertices.data(), bufferCreateInfo.size);
-        vkUnmapMemory(app.g_Device, vertexBufferMemory);
+        void* indexVoid = const_cast<void*>(reinterpret_cast<const void*>(indices.data()));
+        indexBuffer = std::make_unique<Buffer>(GetDevice(), GetPhysicalDevice(), index_buffer_size, bufferUsageFlags, bufferMemoryFlags);
+        indexBuffer->update(indexVoid, index_buffer_size);
 
-        // Get buffer device address
-        VkBufferDeviceAddressInfo info = {};
-        info.buffer = vertexBuffer;
+        // Setup a single transformation matrix that can be used to transform the whole geometry for a single bottom level acceleration structure
+        VkTransformMatrixKHR transform_matrix = {
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f };
+        std::unique_ptr<Buffer> transform_matrix_buffer = std::make_unique<Buffer>(GetDevice(), GetPhysicalDevice(), sizeof(transform_matrix), bufferUsageFlags, bufferMemoryFlags);
+        transform_matrix_buffer->update(&transform_matrix, sizeof(transform_matrix));
 
-        VkDeviceAddress vertexAddress = vkGetBufferDeviceAddress(app.g_Device, &info);
+        VkDeviceOrHostAddressConstKHR vertex_data_device_address{};
+        VkDeviceOrHostAddressConstKHR index_data_device_address{};
+        VkDeviceOrHostAddressConstKHR transform_matrix_device_address{};
 
-        // Populate geometry data struct
-        geometryData.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        geometryData.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        geometryData.vertexData.deviceAddress = vertexAddress;
-        geometryData.maxVertex = triangleVertices.size() / 3;
-        geometryData.vertexStride = sizeof(float) * 3;
-        geometryData.indexType = VK_INDEX_TYPE_NONE_KHR;
+        vertex_data_device_address.deviceAddress = get_buffer_device_address(vertexBuffer->get_handle());
+        index_data_device_address.deviceAddress = get_buffer_device_address(indexBuffer->get_handle());
+        transform_matrix_device_address.deviceAddress = get_buffer_device_address(transform_matrix_buffer->get_handle());
 
-        vkCreateAccelerationStructureKHR(app.g_Device, &accelStructureInfo, nullptr, &accelStruct);
+        VkAccelerationStructureGeometryKHR acceleration_structure_geometry{};
+        acceleration_structure_geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        acceleration_structure_geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        acceleration_structure_geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        acceleration_structure_geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        acceleration_structure_geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        acceleration_structure_geometry.geometry.triangles.vertexData = vertex_data_device_address;
+        acceleration_structure_geometry.geometry.triangles.maxVertex = 3;
+        acceleration_structure_geometry.geometry.triangles.vertexStride = sizeof(Vertex);
+        acceleration_structure_geometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+        acceleration_structure_geometry.geometry.triangles.indexData = index_data_device_address;
+        acceleration_structure_geometry.geometry.triangles.transformData = transform_matrix_device_address;
 
-        std::vector<VkAccelerationStructureGeometryKHR> geometryDatas;
-        geometryDatas[0].sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        geometryDatas[0].geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        geometryDatas[0].geometry.triangles = geometryData;
+        // Get the size requirements for buffers involved in the acceleration structure build process
+        VkAccelerationStructureBuildGeometryInfoKHR acceleration_structure_build_geometry_info{};
+        acceleration_structure_build_geometry_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+        acceleration_structure_build_geometry_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        acceleration_structure_build_geometry_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        acceleration_structure_build_geometry_info.geometryCount = 1;
+        acceleration_structure_build_geometry_info.pGeometries = &acceleration_structure_geometry;
 
-        VkAccelerationStructureBuildGeometryInfoKHR buildGeoInfo[1];
-        buildGeoInfo[0] = {};
-        buildGeoInfo[0].sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-        buildGeoInfo[0].type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        buildGeoInfo[0].mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        buildGeoInfo[0].dstAccelerationStructure = accelStruct;
-        buildGeoInfo[0].geometryCount = 1;
-        buildGeoInfo[0].pGeometries = geometryDatas.data();
+        const uint32_t primitive_count = 1;
 
-        /*VkAccelerationStructureBuildGeometryInfoKHR geometryInfos;
-        geometryInfos[0] = buildInfo;
-        geometryInfos[0].pGeometries = &geometryData;
+        VkAccelerationStructureBuildSizesInfoKHR acceleration_structure_build_sizes_info{};
+        acceleration_structure_build_sizes_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+        vkGetAccelerationStructureBuildSizesKHR(
+            GetDevice(),
+            VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+            &acceleration_structure_build_geometry_info,
+            &primitive_count,
+            &acceleration_structure_build_sizes_info);
 
-        buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        buildInfo.geometryCount = 1;*/
+        // Create a buffer to hold the acceleration structure
+        buffer = std::make_unique<Buffer>(
+            GetDevice(),
+            GetPhysicalDevice(),
+            acceleration_structure_build_sizes_info.accelerationStructureSize,
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+            0);
+
+        // Create the acceleration structure
+        VkAccelerationStructureCreateInfoKHR acceleration_structure_create_info{};
+        acceleration_structure_create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+        acceleration_structure_create_info.buffer = buffer->get_handle();
+        acceleration_structure_create_info.size = acceleration_structure_build_sizes_info.accelerationStructureSize;
+        acceleration_structure_create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        vkCreateAccelerationStructureKHR(GetDevice(), &acceleration_structure_create_info, nullptr, &handle);
+
+        // The actual build process starts here
+
+        // Create a scratch buffer as a temporary storage for the acceleration structure build
+        ScratchBuffer scratch_buffer = create_scratch_buffer(acceleration_structure_build_sizes_info.buildScratchSize);
+
+        VkAccelerationStructureBuildGeometryInfoKHR acceleration_build_geometry_info{};
+        acceleration_build_geometry_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+        acceleration_build_geometry_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        acceleration_build_geometry_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        acceleration_build_geometry_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        acceleration_build_geometry_info.dstAccelerationStructure = handle;
+        acceleration_build_geometry_info.geometryCount = 1;
+        acceleration_build_geometry_info.pGeometries = &acceleration_structure_geometry;
+        acceleration_build_geometry_info.scratchData.deviceAddress = scratch_buffer.device_address;
+
+        VkAccelerationStructureBuildRangeInfoKHR acceleration_structure_build_range_info;
+        acceleration_structure_build_range_info.primitiveCount = 1;
+        acceleration_structure_build_range_info.primitiveOffset = 0;
+        acceleration_structure_build_range_info.firstVertex = 0;
+        acceleration_structure_build_range_info.transformOffset = 0;
+        std::vector<VkAccelerationStructureBuildRangeInfoKHR*> acceleration_build_structure_range_infos = { &acceleration_structure_build_range_info };
+
+        // Build the acceleration structure on the device via a one-time command buffer submission
+        // Some implementations may support acceleration structure building on the host (VkPhysicalDeviceAccelerationStructureFeaturesKHR->accelerationStructureHostCommands), but we prefer device builds
+        // Create the command pool
+        VkCommandPool commandPool;
+        VkCommandBuffer commandBuffer;
+        VkCommandPoolCreateInfo poolCreateInfo = {};
+        poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolCreateInfo.queueFamilyIndex = GetApp().g_QueueFamily[1];
+        poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        check_vk_result(vkCreateCommandPool(GetDevice(), &poolCreateInfo, nullptr, &commandPool));
+
+        VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+        commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        commandBufferAllocateInfo.commandPool = commandPool;
+        commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Primary command buffer
+        commandBufferAllocateInfo.commandBufferCount = 1; // Allocate a single command buffer
+
+        check_vk_result(vkAllocateCommandBuffers(GetDevice(), &commandBufferAllocateInfo, &commandBuffer));
+
+        VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+        cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(commandBuffer, &cmdBufferBeginInfo);
+
+        vkCmdBuildAccelerationStructuresKHR(
+            commandBuffer,
+            1,
+            &acceleration_build_geometry_info,
+            acceleration_build_structure_range_infos.data());
+
+        // Flush command buffer
+        check_vk_result(vkEndCommandBuffer(commandBuffer));
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &commandBuffer;
+
+        // Create fence to ensure that the command buffer has finished executing
+        VkFenceCreateInfo fence_info{};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_info.flags = 0;
+
+        VkFence fence;
+        check_vk_result(vkCreateFence(GetDevice(), &fence_info, nullptr, &fence));
+
+        // Submit to the queue
+        VkResult result = vkQueueSubmit(GetComputeQueue(), 1, &submit_info, fence);
+        // Wait for the fence to signal that command buffer has finished executing
+        check_vk_result(vkWaitForFences(GetDevice(), 1, &fence, VK_TRUE, 1000));
+
+        vkDestroyFence(GetDevice(), fence, nullptr);
+        vkFreeCommandBuffers(GetDevice(), commandPool, 1, &commandBuffer);
+        vkDestroyCommandPool(GetDevice(), commandPool, nullptr);
+
+        delete_scratch_buffer(scratch_buffer);
+
+        // Get the bottom acceleration structure's handle, which will be used during the top level acceleration build
+        VkAccelerationStructureDeviceAddressInfoKHR acceleration_device_address_info{};
+        acceleration_device_address_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+        acceleration_device_address_info.accelerationStructure = handle;
+        deviceAddress = vkGetAccelerationStructureDeviceAddressKHR(GetDevice(), &acceleration_device_address_info);
     }
 
     AccelerationStructure::~AccelerationStructure()
     {
-        vkDestroyBuffer(app.g_Device, vertexBuffer, nullptr);
-        vkFreeMemory(app.g_Device, vertexBufferMemory, nullptr);
+        if (buffer)
+        {
+            buffer.reset();
+        }
+        if (handle)
+        {
+            vkDestroyAccelerationStructureKHR(GetDevice(), handle, nullptr);
+        }
+        vertexBuffer.reset();
+        indexBuffer.reset();
     }
 
     /*void AccelerationStructure::createBottomLevelAccelerationStructure(VkDevice device,
