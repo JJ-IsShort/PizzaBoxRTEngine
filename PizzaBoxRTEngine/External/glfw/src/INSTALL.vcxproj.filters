@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Misc Coding Projects\PizzaBoxRTEngine-windows\PizzaBoxRTEngine\CMakeFiles\d04e992844e545123e3c9d645ba3e670\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{459A69F5-E364-3FB4-BDB4-B89C7A305887}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

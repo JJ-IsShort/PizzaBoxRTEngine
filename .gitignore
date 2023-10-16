@@ -7,6 +7,17 @@
 # CMake builds
 Build/
 
+# Linux CMake generated buildsystem data
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+compile_commands.json
+CMakeFiles/
+
+PizzaBox
+imgui.ini
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # User-specific files
 *.rsuser
 *.suo
