@@ -51,6 +51,7 @@ namespace PBEngine
 			if (derivedRenderer != nullptr)
 			{
 				vkQueueWaitIdle(GetRenderQueue());
+				ImGui_ImplVulkan_RemoveTexture(ImageDS);
 				derivedRenderer->ResizeViewImage();
 				ImageDS = ImGui_ImplVulkan_AddTexture(derivedRenderer->viewImage.sampler, derivedRenderer->viewImage.view,
 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

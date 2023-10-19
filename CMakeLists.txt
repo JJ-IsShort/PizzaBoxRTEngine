@@ -27,13 +27,24 @@ set(ENGINE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/Rendering/RenderData/AccelerationStructure.cpp"
     #"${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/VulkanHelp/Context.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/app.cpp"
- "PizzaBoxRTEngine/PizzaBoxRTEngine/VulkanHelp/vk_common.h")
+    "PizzaBoxRTEngine/PizzaBoxRTEngine/VulkanHelp/vk_common.cpp"
+    "PizzaBoxRTEngine/PizzaBoxRTEngine/Rendering/RenderData/TLAS.cpp"
+    "PizzaBoxRTEngine/PizzaBoxRTEngine/VulkanHelp/Buffer.cpp"
+    "PizzaBoxRTEngine/PizzaBoxRTEngine/VulkanHelp/GLSLCompiler.cpp"
+    "PizzaBoxRTEngine/PizzaBoxRTEngine/Scene/Scene.cpp"
+    "PizzaBoxRTEngine/PizzaBoxRTEngine/Panels/Inspector.cpp"
+    
+)
 
 add_executable(PizzaBox
     "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine/main.cpp"
     ${IMGUI_SOURCES}
     ${ENGINE_SOURCES}
  )
+
+# Define C++ version to be used for building the project
+set_property(TARGET PizzaBox PROPERTY CXX_STANDARD 20)
+set_property(TARGET PizzaBox PROPERTY CXX_STANDARD_REQUIRED ON)
 
 include_directories(PizzaBox PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/PizzaBoxRTEngine/PizzaBoxRTEngine"
@@ -52,7 +63,14 @@ target_link_libraries(PizzaBox PRIVATE volk)
 
 # Vulkan Linking
 find_package(Vulkan REQUIRED)
-target_link_libraries(PizzaBox PRIVATE Vulkan::Vulkan)
+if(WIN32)
+    # On Windows
+    set(SHADERC_LIB_PATH "$ENV{VULKAN_SDK}/Lib/shaderc_shared.lib")
+else()
+    # On Linux/macOS or other Unix-like systems
+    set(SHADERC_LIB_PATH "$ENV{VULKAN_SDK}/lib/libshaderc_shared.so")
+endif()
+target_link_libraries(PizzaBox PRIVATE Vulkan::Vulkan ${SHADERC_LIB_PATH})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -71,7 +89,3 @@ target_link_libraries(PizzaBox PRIVATE glfw)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/External/glm")
 target_link_libraries(PizzaBox PUBLIC glm::glm)
-
-# Define C++ version to be used for building the project
-set_property(TARGET ${Recipe_Name} PROPERTY CXX_STANDARD 20)
-set_property(TARGET ${Recipe_Name} PROPERTY CXX_STANDARD_REQUIRED ON)

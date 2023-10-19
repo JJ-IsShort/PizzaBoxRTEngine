@@ -6,6 +6,9 @@
 // My header files
 #include "Panels/Panel.h"
 #include "Panels/Viewport.h"
+#include "Panels/Inspector.h"
+#include <unordered_map>
+#include <typeindex>
 
 namespace PBEngine
 {
@@ -24,6 +27,8 @@ namespace PBEngine
     ImGui_ImplVulkanH_Window App::g_MainWindowData;
     int App::g_MinImageCount = 2;
     bool App::g_SwapChainRebuild = false;
+
+    Scene scene;
 
     void App::SetupImGuiStyle() {
         // Photoshop style by Derydoca from ImThemes
@@ -280,7 +285,11 @@ namespace PBEngine
         std::list<std::unique_ptr<Panel>> panels;
 
         std::unique_ptr<Viewport> viewport = std::make_unique<Viewport>();
+        std::unique_ptr<Inspector> inspector = std::make_unique<Inspector>();
         panels.push_back(std::move(viewport));
+        panels.push_back(std::move(inspector));
+
+        std::unordered_map<std::type_index, std::shared_ptr<void>> test;
 
         for (auto& panelPtr : panels) {
             Panel& panel = *panelPtr;
@@ -365,6 +374,7 @@ namespace PBEngine
                 Panel& panel = *panelPtr;
                 panel.Show();
             }
+            ImGui::ShowDemoWindow();
 
             // Rendering
             ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);

@@ -19,15 +19,14 @@
 #include <GLFW/glfw3.h>
 #endif
 #include "../../External/volk/volk.h"
-//#include "VulkanHelp/vk_common.h"
-//#include <vulkan/vulkan.h>
+
 #include <vector>
-// #include <vulkan/vulkan_beta.h>
 
 // #define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
+#include "Scene/Scene.h"
 
 namespace PBEngine
 {
@@ -51,6 +50,8 @@ namespace PBEngine
         static ImGui_ImplVulkanH_Window g_MainWindowData;
         static int g_MinImageCount;
         static bool g_SwapChainRebuild;
+
+        Scene scene;
 
         void SetupImGuiStyle();
 	private:
