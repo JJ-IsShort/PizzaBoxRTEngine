@@ -8,6 +8,7 @@ namespace PBEngine
 	{
 	public:
 		void Show() override;
+		void Init() override;
 
 	private:
 

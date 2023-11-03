@@ -9,6 +9,7 @@
 #include "Panels/Inspector.h"
 #include <unordered_map>
 #include <typeindex>
+#include <Scene/SceneManagement.h>
 
 namespace PBEngine
 {
@@ -27,8 +28,6 @@ namespace PBEngine
     ImGui_ImplVulkanH_Window App::g_MainWindowData;
     int App::g_MinImageCount = 2;
     bool App::g_SwapChainRebuild = false;
-
-    Scene scene;
 
     void App::SetupImGuiStyle() {
         // Photoshop style by Derydoca from ImThemes
@@ -252,6 +251,8 @@ namespace PBEngine
         init_info.CheckVkResultFn = check_vk_result;
         ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
+        SceneManager::Construct();
+
         // Upload Fonts
         {
             // Use any command queue
@@ -289,8 +290,6 @@ namespace PBEngine
         panels.push_back(std::move(viewport));
         panels.push_back(std::move(inspector));
 
-        std::unordered_map<std::type_index, std::shared_ptr<void>> test;
-
         for (auto& panelPtr : panels) {
             Panel& panel = *panelPtr;
             panel.Init();
@@ -300,6 +299,9 @@ namespace PBEngine
         while (!glfwWindowShouldClose(window)) {
             // Poll events
             glfwPollEvents();
+
+            // Here we do processing stuff and then later we do all the UI stuff
+            SceneManager::GetCurrent()->Update();
 
             for (auto& panelPtr : panels) {
                 Panel& panel = *panelPtr;

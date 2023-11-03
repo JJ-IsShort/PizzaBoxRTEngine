@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <VulkanHelp/GLSLCompiler.h>
+#include "RenderInterface.h"
 
 namespace PBEngine
 {
@@ -798,10 +799,17 @@ void main() {
         vkGetPhysicalDeviceFeatures2(GetPhysicalDevice(), &device_features);
 
         // This is where Acceleration Structures get generated from the secene's
-        // MeshRenderers (or whatever). This is not there yet.
-        AccelerationStructure structure = AccelerationStructure();
+        // MeshRenderers (or whatever).
         scene = std::make_unique<TLAS>();
-        (*scene).AddBLAS(&structure);
+        std::vector<RenderInterface::RenderObject>& objects = RenderInterface::GetRenderObjects();
+        RenderInterface::RenderObject testObject = RenderInterface::RenderObject();
+        AccelerationStructure testAccel = AccelerationStructure();
+        testObject.accelStructure = &testAccel;
+        objects.push_back(testObject);
+        for (size_t i = 0; i < objects.size(); i++)
+        {
+            (*scene).AddBLAS(objects[i].accelStructure);
+        }
         (*scene).BuildTLAS();
 
         viewportWidth = width;

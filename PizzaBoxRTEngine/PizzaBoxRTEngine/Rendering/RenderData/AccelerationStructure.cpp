@@ -81,16 +81,32 @@ namespace PBEngine
         }
     }
 
+    AccelerationStructure::AccelerationStructure(std::vector<glm::vec3>& vertices, std::vector<uint32_t>& indices)
+    {
+        Initialize(vertices, indices);
+    }
+
     AccelerationStructure::AccelerationStructure()
     {
-        size_t vertex_buffer_size = triangleVertices.size() * sizeof(Vertex);
+        // Define the vertex data for the triangle
+        std::vector<glm::vec3> vertices;
+        vertices.push_back({ -0.5f, -0.5f, 0.0f });
+        vertices.push_back({ 0.5f, -0.5f, 0.0f });
+        vertices.push_back({ 0.0f,  0.5f, 0.0f });
+        std::vector<uint32_t> indices = { 0, 1, 2 };
+        Initialize(vertices, indices);
+    }
+
+    void AccelerationStructure::Initialize(std::vector<glm::vec3>& vertices, std::vector<uint32_t>& indices)
+    {
+        size_t vertex_buffer_size = vertices.size() * sizeof(glm::vec3);
         size_t index_buffer_size = indices.size() * sizeof(uint32_t);
 
         // Create buffers for the bottom level geometry
         const VkBufferUsageFlags bufferUsageFlags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         const VkMemoryPropertyFlags bufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-        void* triangleVoid = const_cast<void*>(reinterpret_cast<const void*>(triangleVertices.data()));
+        void* triangleVoid = const_cast<void*>(reinterpret_cast<const void*>(vertices.data()));
         vertexBuffer = std::make_unique<Buffer>(GetDevice(), GetPhysicalDevice(), vertex_buffer_size, bufferUsageFlags, bufferMemoryFlags);
         vertexBuffer->update(triangleVoid, vertex_buffer_size);
 
@@ -122,7 +138,7 @@ namespace PBEngine
         acceleration_structure_geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         acceleration_structure_geometry.geometry.triangles.vertexData = vertex_data_device_address;
         acceleration_structure_geometry.geometry.triangles.maxVertex = 3;
-        acceleration_structure_geometry.geometry.triangles.vertexStride = sizeof(Vertex);
+        acceleration_structure_geometry.geometry.triangles.vertexStride = sizeof(glm::vec3);
         acceleration_structure_geometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
         acceleration_structure_geometry.geometry.triangles.indexData = index_data_device_address;
         acceleration_structure_geometry.geometry.triangles.transformData = transform_matrix_device_address;
@@ -231,7 +247,7 @@ namespace PBEngine
         // Submit to the queue
         VkResult result = vkQueueSubmit(GetComputeQueue(), 1, &submit_info, fence);
         // Wait for the fence to signal that command buffer has finished executing
-        check_vk_result(vkWaitForFences(GetDevice(), 1, &fence, VK_TRUE, 1000));
+        check_vk_result(vkWaitForFences(GetDevice(), 1, &fence, VK_TRUE, UINT64_MAX));
 
         vkDestroyFence(GetDevice(), fence, nullptr);
         vkFreeCommandBuffers(GetDevice(), commandPool, 1, &commandBuffer);

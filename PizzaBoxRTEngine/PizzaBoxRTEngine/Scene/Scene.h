@@ -6,13 +6,18 @@
 #include <typeinfo>
 #include <memory>
 #include <functional>
-#include <variant>
+//#include <variant>
+#include <algorithm>
+#include <string>
+#include "../../../External/imgui/imgui.h"
 
 namespace PBEngine
 {
 	class Scene
 	{
 	public:
+        using ComponentID = uint32_t;
+
 		Scene();
 		~Scene();
 
@@ -31,8 +36,11 @@ namespace PBEngine
         class Component
         {
         public:
-            Component() { Construt(); };
-            virtual void Construt() {};
+            std::string componentName = "Base Component";
+
+            Component() {};
+            virtual void Construct(Entity entity) {};
+            //virtual std::string GetName(Entity entity) { return "Component"; };
             virtual void Show() {};
             virtual void Start() {};
             virtual void Update() {};
@@ -42,10 +50,29 @@ namespace PBEngine
 
         };
 
-        class Test_Component : Component
+        class Test_Component : public Component
         {
-            float foo;
-            int ba;
+            int foo;
+            bool bar;
+
+            void Show() override
+            {
+                ImGui::SliderInt("Foo", &foo, -50, 50);
+                ImGui::Checkbox("Bar", &bar);
+            }
+        };
+
+        class Service
+        {
+        public:
+            Service() = default;
+            virtual void Construct() {};
+            virtual void Update(Entity entity) {};
+            virtual void ComponentAdded(Entity entity) {};
+            virtual ~Service() = default;
+
+            int id;
+            int version;
         };
 
         template <typename T>
@@ -53,56 +80,42 @@ namespace PBEngine
         {
             auto manager = GetComponentManager<T>();
             if (manager) {
-                return manager->CreateComponent(entity);
+                std::shared_ptr<T> component = manager->CreateComponent(entity);
+                for (size_t i = 0; i < services.size(); i++)
+                {
+                    services[i]->ComponentAdded(entity);
+                }
+                return component;
             }
             else {
                 // Component manager for the given type doesn't exist.
                 // You can handle this case by creating the manager or throwing an error.
                 // For simplicity, let's create one if it doesn't exist.
                 auto newManager = std::make_shared<ComponentManager<T>>();
-                ComponentManagers[std::type_index(typeid(T))] = std::dynamic_pointer_cast<BaseComponentManager> (newManager);
-                return newManager->CreateComponent(entity);
-            }
-        }
-
-        std::vector<std::shared_ptr<Component>> GetComponents(Entity entity)
-        {
-            std::vector<std::shared_ptr<Component>> output;
-            for (const auto& element : ComponentManagers)
-            {
-                //std::shared_ptr<ComponentManager<void>> manager = std::dynamic_pointer_cast<ComponentManager<void>>(element.second);
-
-                // Call GetAllComponents on the appropriate ComponentManager
-                std::vector<std::shared_ptr<Component>> components = element.second->GetAllComponents(entity);
-
-                // Append the components to the result vector
-                output.insert(output.end(), components.begin(), components.end());
-            }
-            return output;
-        }
-
-        /*std::vector<std::shared_ptr<Component>> GetAllComponentsForEntity(Entity entity) {
-            std::vector<std::shared_ptr<Component>> resultComponents;
-
-            for (const auto& [typeIndex, manager] : ComponentManagers) {
-                // Since each manager is stored as a shared_ptr<void>, we'll need to cast it back.
-                // But we don't know the exact type T, so we employ some type-erasure techniques.
-
-                auto findFunc = [entity](const auto& managerPtr) -> std::shared_ptr<Component> {
-                    using ManagerType = std::decay_t<decltype(*managerPtr)>;
-                    using ComponentType = typename ManagerType::ComponentType;
-
-                    return std::static_pointer_cast<Component>(managerPtr->getComponent(entity));
-                };
-
-                auto component = std::visit(findFunc, manager);
-                if (component) {
-                    resultComponents.push_back(component);
+                componentManagers[std::type_index(typeid(T))] = std::dynamic_pointer_cast<BaseComponentManager>(newManager);
+                std::shared_ptr<T> component = newManager->CreateComponent(entity);
+                for (size_t i = 0; i < services.size(); i++)
+                {
+                    services[i]->ComponentAdded(entity);
                 }
+                return component;
             }
+        }
 
-            return resultComponents;
-        }*/
+        std::vector<std::shared_ptr<Component>> GetComponents(Entity entity);
+
+        template <typename T>
+        std::shared_ptr<T> AddService()
+        {
+            std::shared_ptr<T> newService = std::make_shared<T>();
+            std::shared_ptr<Service> baseService = std::dynamic_pointer_cast<Service>(newService);
+            services.resize(services.size() + 1);
+            services[services.size() - 1] = baseService;
+            baseService->Construct();
+            return newService;
+        }
+
+        void Update();
 
         uint32_t EntityCount()
         {
@@ -117,6 +130,40 @@ namespace PBEngine
         std::shared_ptr<Entity> GetEntityAtID(int id)
         {
             return managedEntities.GetEntityAtID(id);
+        }
+
+        std::vector<std::shared_ptr<Entity>> GetAllEntities()
+        {
+            return managedEntities.GetAllEntities();
+        }
+        
+        template <typename T>
+        std::shared_ptr<T> GetComponents(Entity entity, ComponentID index)
+        {
+            return GetComponentManager<T>()->GetComponent(entity, index);
+        }
+
+        // This is a version of GetComponents<T>(Scene::Entity entity)
+        // that lets you use multiple comma seperated T values and returns
+        // them in that order.
+        template <typename FirstT, typename... RestT>
+        std::vector<std::shared_ptr<Component>> GetComponents(Entity entity)
+        {
+            std::vector<std::shared_ptr<Component>> result;
+            std::vector<std::shared_ptr<FirstT>> thisType = GetComponentsOneT<FirstT>(entity);
+            for (size_t i = 0; i < thisType.size(); i++)
+            {
+                result.push_back(std::dynamic_pointer_cast<Component>(thisType[i]));
+            }
+            if constexpr (sizeof...(RestT) > 0) {
+                std::vector<std::shared_ptr<Component>> nextType = GetComponents<RestT...>(entity);
+                /*for (size_t i = 0; i < nextType.size(); i++)
+                {
+                    result.push_back(std::dynamic_pointer_cast<Component>(nextType[i]));
+                }*/
+                result.insert(result.end(), nextType.begin(), nextType.end());
+            }
+            return result;
         }
 
     private:
@@ -145,6 +192,11 @@ namespace PBEngine
                 return entities[id];
             }
 
+            std::vector<std::shared_ptr<Entity>> GetAllEntities()
+            {
+                return entities;
+            }
+
             uint32_t EntityCount()
             {
                 return entities.size();
@@ -163,6 +215,56 @@ namespace PBEngine
 			std::vector<int> freeIndices;
 		};
 
+        /*class ServiceManager
+        {
+        public:
+            template <typename T>
+            std::shared_ptr<T> CreateService() {
+                std::shared_ptr<T> newService = std::make_unique<T>();
+                std::shared_ptr<Service> baseService = std::dynamic_pointer_cast<Service>(newService);
+                if (freeIndices.empty()) {
+                    // If there are no free indices, create a new entity.
+                    newService->id = services.size();
+                    newService->version = 0;
+                    services.push_back(baseService);
+                }
+                else {
+                    // Reuse a previously freed index.
+                    int index = freeIndices.back();
+                    freeIndices.pop_back();
+                    baseService = entities[index];
+                }
+                return entity;
+            }
+
+            std::shared_ptr<Entity> GetEntityAtID(int id)
+            {
+                return entities[id];
+            }
+
+            std::vector<std::shared_ptr<Entity>> GetAllEntities()
+            {
+                return entities;
+            }
+
+            uint32_t EntityCount()
+            {
+                return entities.size();
+            }
+
+            void DestroyEntity(Entity entity) {
+                if (entity.id < entities.size() && entities[entity.id]->version == entity.version) {
+                    // Mark the entity as freed and increment its version.
+                    freeIndices.push_back(entity.id);
+                    entities[entity.id]->version++;
+                }
+            }
+
+        private:
+            std::vector<std::shared_ptr<Service>> services;
+            std::vector<int> freeIndices;
+        };*/
+
         class BaseComponentManager {
         public:
             virtual ~BaseComponentManager() = default;
@@ -170,8 +272,6 @@ namespace PBEngine
             // Get all components of a specific type associated with an entity
             virtual std::vector<std::shared_ptr<Component>> GetAllComponents(Entity entity) = 0;
         };
-
-        using ComponentID = uint32_t;
 
         template <typename T>
         class ComponentManager : public BaseComponentManager {
@@ -186,6 +286,7 @@ namespace PBEngine
             // Create a new component for a given entity and return a shared pointer to it
             std::shared_ptr<T> CreateComponent(Entity entity) {
                 std::shared_ptr<T> component = std::make_shared<T>();
+                component->Construct(entity);
                 components[entity].emplace_back(component);
                 return component;
             }
@@ -215,6 +316,14 @@ namespace PBEngine
             }
 
             // Get all components of a specific type associated with an entity
+            std::vector<std::shared_ptr<T>> GetAllComponentsAsT(Entity entity) {
+                if (components.find(entity) != components.end()) {
+                    return components[entity];
+                }
+                return std::vector<std::shared_ptr<T>>();
+            }
+
+            // Get all components of a specific type associated with an entity
             std::vector<std::shared_ptr<Component>> GetAllComponents(Entity entity) override {
                 std::vector<std::shared_ptr<Component>> result = std::vector<std::shared_ptr<Component>>();
                 if (components.find(entity) != components.end()) {
@@ -230,14 +339,25 @@ namespace PBEngine
 
         EntityManager managedEntities;
 
-        // Define a map to store component managers for different component types.
-        std::unordered_map<std::type_index, std::shared_ptr<BaseComponentManager>> ComponentManagers;
+        // A map to store component managers for different component types.
+        std::unordered_map<std::type_index, std::shared_ptr<BaseComponentManager>> componentManagers;
+
+        public: std::vector<std::shared_ptr<Service>> services; private:
+
+        template <typename T>
+        std::vector<std::shared_ptr<T>> GetComponentsOneT(Entity entity)
+        {
+            std::shared_ptr<ComponentManager<T>> manager = GetComponentManager<T>();
+            if (manager)
+                return manager->GetAllComponentsAsT(entity);
+            return std::vector<std::shared_ptr<T>>();
+        }
 
         template <typename T>
         std::shared_ptr<ComponentManager<T>> GetComponentManager() {
             auto typeIndex = std::type_index(typeid(T));
-            if (ComponentManagers.find(typeIndex) != ComponentManagers.end()) {
-                return std::dynamic_pointer_cast<ComponentManager<T>>(ComponentManagers[typeIndex]);
+            if (componentManagers.find(typeIndex) != componentManagers.end()) {
+                return std::dynamic_pointer_cast<ComponentManager<T>>(componentManagers[typeIndex]);
             }
             return nullptr;
         }
